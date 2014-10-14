@@ -1,6 +1,8 @@
+#!/usr/bin/env ruby
+
 require './tile'
 require './board'
-
+require 'yaml'
 
 
 class Game
@@ -18,18 +20,18 @@ class Game
     until @board.over?
       @board.display
       move = get_move
-      p move
       make_move(move)
     end
     
     if @board.won?
       puts "you won!"
     else
-      puts "you...didn't win!"
+      puts "you...didn't win!ls"
     end
   end
 
   def make_move(move)
+    return save if move == ["s"]
     action = move.shift
     action == 'f' ? @board[move].flag : @board[move].reveal
   end
@@ -39,7 +41,9 @@ class Game
     puts "Enter move:"
     begin
       move = gets.chomp.split
-      raise InputError.new("Not a valid choice") unless valid?(move)
+      p move
+      raise InputError.new("Not a valid choice") unless (valid?(move) || save?(move))
+      return move if save?(move)
       move.map! {|i| i == move.first ? i : Integer(i)  }
       raise InputError.new("Already revealed") if revealed?(move.drop(1)) && move.first == 'r'
     rescue InputError => error
@@ -60,7 +64,32 @@ class Game
     @board.revealed?(move) || @board.flagged?(move)
   end
   
+  def save?(move)
+    move == ["s"]
+  end
+  
+  def save
+    File.open("save-game", "w") do |f|
+      game = self.to_yaml
+      f.puts game
+    end
+  end
+
+  
 end
 
 
-Game.new(3).play
+if __FILE__ == $PROGRAM_NAME
+  puts "Would you like to play a saved game? (y/N)"
+  input = gets.chomp
+  unless input == "y"
+    puts "How large a field would you like?"
+    Game.new(gets.chomp.to_i).play
+  else
+    puts "Please enter the name of the save file"
+    input = gets.chomp
+    game = YAML.load_file(input)
+    game.play
+  end
+end
+  

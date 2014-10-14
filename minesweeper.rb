@@ -1,67 +1,66 @@
-class Board
-  def initialize
-    @current_board = build_board
-  end
-  
-  def build_board
-    new_board = Array.new(9) { Array.new(9) { Tile.new } }
-    # 9.times do |row|
-    #   9.times do |tile|
-    #     new_board[row][tile] = Tile.new
-    #   end
-    # end
-    dispence_mines(new_board)
-  end
-  
-  def dispence_mines(new_board)
-    new_board.flatten.sample(9).each { |tile| tile.place_mine }
-    # total_mines = 0
-    # until total_mines == 9
-    #   x = rand(9)
-    #   p x
-    #   y = rand(9)
-    #   p y
-    #   current_tile = new_board[x][y]
-    #   p current_tile
-    #   unless current_tile.mined?
-    #     current_tile.place_mine
-    #     total_mines +=1
-    #   end
-    # end
-    # p total_mines
-    new_board
-  end
-  
-  def display
-    p @current_board
-  end
-  
-  
-end
+require './tile'
+require './board'
 
-class Tile
-    
-  def initialize
-    @mined = false
-  end
-  
-  def mined?
-    @mined
-  end
-  
-  def place_mine
-    @mined = true
-  end
-  
-end
+
 
 class Game
+  
+  class InputError < StandardError; end
+  
   attr_reader :board
   
-  def initialize
-    @board = Board.new
+  def initialize(num)
+    @board = Board.new(num)
+    @size = num
   end
+  
+  def play
+    until @board.over?
+      @board.display
+      move = get_move
+      p move
+      make_move(move)
+    end
+    
+    if @board.won?
+      puts "you won!"
+    else
+      puts "you...didn't win!"
+    end
+  end
+
+  def make_move(move)
+    action = move.shift
+    action == 'f' ? @board[move].flag : @board[move].reveal
+  end
+  
+  def get_move
+    puts "Move format: f/r row col  ex: f 1 3 to flag row 1 col 3"
+    puts "Enter move:"
+    begin
+      move = gets.chomp.split
+      raise InputError.new("Not a valid choice") unless valid?(move)
+      move.map! {|i| i == move.first ? i : Integer(i)  }
+      raise InputError.new("Already revealed") if revealed?(move.drop(1)) && move.first == 'r'
+    rescue InputError => error
+      puts error
+      retry
+    end
+    move
+  end
+  
+  def valid?(move)
+    move.class == Array && 
+    move.drop(1).all? {|i| ('0'...@size.to_s).include? i } && 
+    move.length == 3 && 
+    'rf'.include?(move.first)
+  end
+  
+  def revealed?(move)
+    @board.revealed?(move) || @board.flagged?(move)
+  end
+  
 end
 
 
-Game.new.board.display
+Game.new(3).play
